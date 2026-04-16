@@ -1,0 +1,713 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>UserVault — User Management System</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+  <style>
+    /* ── DESIGN TOKENS ─────────────────────────────────────── */
+    :root {
+      --bg:        #0a0a0f;
+      --surface:   #13131c;
+      --card:      #1a1a27;
+      --border:    #2a2a3d;
+      --accent:    #7c6af7;
+      --accent2:   #f06292;
+      --accent3:   #4dd0e1;
+      --text:      #e8e8f0;
+      --muted:     #7a7a9a;
+      --success:   #66bb6a;
+      --danger:    #ef5350;
+      --warn:      #ffa726;
+      --radius:    12px;
+      --font-head: 'Syne', sans-serif;
+      --font-mono: 'DM Mono', monospace;
+      --font-body: 'DM Sans', sans-serif;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font-body);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* ── BACKGROUND GRID ─────────────────────────────────────── */
+    body::before {
+      content: '';
+      position: fixed; inset: 0;
+      background-image:
+        linear-gradient(rgba(124,106,247,.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(124,106,247,.04) 1px, transparent 1px);
+      background-size: 48px 48px;
+      pointer-events: none; z-index: 0;
+    }
+
+    /* ── HEADER ──────────────────────────────────────────────── */
+    header {
+      position: sticky; top: 0; z-index: 100;
+      background: rgba(10,10,15,.85);
+      backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--border);
+      padding: 0 32px;
+      display: flex; align-items: center; justify-content: space-between;
+      height: 64px;
+    }
+
+    .logo {
+      font-family: var(--font-head);
+      font-size: 1.4rem; font-weight: 800;
+      background: linear-gradient(135deg, var(--accent), var(--accent3));
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      background-clip: text; letter-spacing: -0.5px;
+    }
+
+    .logo span {
+      font-weight: 400;
+      -webkit-text-fill-color: var(--muted);
+      background: none; font-size: .95rem;
+      margin-left: 8px; letter-spacing: 0;
+    }
+
+    .status-pill {
+      display: flex; align-items: center; gap: 6px;
+      background: rgba(102,187,106,.1); border: 1px solid rgba(102,187,106,.3);
+      color: var(--success); padding: 4px 12px; border-radius: 999px;
+      font-family: var(--font-mono); font-size: .75rem;
+    }
+
+    .status-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--success); animation: pulse 2s infinite; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+
+    /* ── LAYOUT ──────────────────────────────────────────────── */
+    .app {
+      position: relative; z-index: 1;
+      max-width: 1300px; margin: 0 auto;
+      padding: 32px 24px;
+      display: grid;
+      grid-template-columns: 340px 1fr;
+      gap: 24px;
+      align-items: start;
+    }
+
+    /* ── CARDS ───────────────────────────────────────────────── */
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+
+    .card-header {
+      padding: 20px 24px 16px;
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; gap: 10px;
+    }
+
+    .card-icon {
+      width: 32px; height: 32px; border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1rem;
+    }
+
+    .card-title {
+      font-family: var(--font-head);
+      font-size: .95rem; font-weight: 700;
+      letter-spacing: -.3px;
+    }
+
+    /* ── FORM ────────────────────────────────────────────────── */
+    .form-body { padding: 20px 24px; display: flex; flex-direction: column; gap: 14px; }
+
+    .field { display: flex; flex-direction: column; gap: 6px; }
+
+    label {
+      font-size: .75rem; font-weight: 500;
+      color: var(--muted); text-transform: uppercase; letter-spacing: .06em;
+      font-family: var(--font-mono);
+    }
+
+    input, textarea {
+      background: var(--surface); border: 1px solid var(--border);
+      color: var(--text); padding: 10px 14px;
+      border-radius: 8px; font-family: var(--font-body); font-size: .9rem;
+      transition: border-color .2s, box-shadow .2s; outline: none; width: 100%;
+    }
+    input:focus, textarea:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(124,106,247,.15);
+    }
+    textarea { resize: vertical; min-height: 72px; }
+    input::placeholder, textarea::placeholder { color: var(--muted); }
+
+    .btn {
+      padding: 11px 20px; border-radius: 8px; border: none; cursor: pointer;
+      font-family: var(--font-head); font-size: .875rem; font-weight: 700;
+      letter-spacing: .02em; transition: all .2s; display: inline-flex;
+      align-items: center; gap: 6px; justify-content: center;
+    }
+    .btn-primary {
+      background: var(--accent); color: #fff;
+      box-shadow: 0 4px 14px rgba(124,106,247,.3);
+    }
+    .btn-primary:hover { background: #6a57e8; transform: translateY(-1px); box-shadow: 0 6px 18px rgba(124,106,247,.4); }
+    .btn-danger  { background: rgba(239,83,80,.15); color: var(--danger); border: 1px solid rgba(239,83,80,.3); }
+    .btn-danger:hover  { background: rgba(239,83,80,.25); }
+    .btn-success { background: rgba(102,187,106,.15); color: var(--success); border: 1px solid rgba(102,187,106,.3); }
+    .btn-success:hover { background: rgba(102,187,106,.25); }
+    .btn-ghost  { background: transparent; color: var(--muted); border: 1px solid var(--border); }
+    .btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
+    .btn-sm { padding: 6px 12px; font-size: .78rem; }
+    .btn:disabled { opacity: .5; cursor: not-allowed; transform: none !important; }
+    .btn-full { width: 100%; }
+
+    /* ── RIGHT PANEL ─────────────────────────────────────────── */
+    .right-panel { display: flex; flex-direction: column; gap: 20px; }
+
+    /* ── SEARCH & FILTER BAR ─────────────────────────────────── */
+    .search-bar {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 16px 20px;
+      display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end;
+    }
+
+    .search-bar .field { flex: 1; min-width: 130px; }
+    .search-bar label { margin-bottom: 4px; }
+
+    /* ── STATS ROW ───────────────────────────────────────────── */
+    .stats-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+    .stat-card {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 16px 20px;
+      display: flex; flex-direction: column; gap: 4px;
+    }
+    .stat-val {
+      font-family: var(--font-head); font-size: 1.8rem; font-weight: 800;
+      background: linear-gradient(135deg, var(--accent), var(--accent3));
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    }
+    .stat-label { font-size: .75rem; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; font-family: var(--font-mono); }
+
+    /* ── USER TABLE ──────────────────────────────────────────── */
+    .table-wrap { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; }
+    thead th {
+      padding: 12px 16px; text-align: left;
+      font-family: var(--font-mono); font-size: .72rem;
+      color: var(--muted); text-transform: uppercase; letter-spacing: .06em;
+      border-bottom: 1px solid var(--border); white-space: nowrap;
+    }
+    tbody tr {
+      border-bottom: 1px solid rgba(42,42,61,.5);
+      transition: background .15s;
+    }
+    tbody tr:hover { background: rgba(124,106,247,.05); }
+    tbody tr:last-child { border-bottom: none; }
+    td { padding: 14px 16px; font-size: .875rem; vertical-align: middle; }
+
+    .user-name { font-weight: 600; font-family: var(--font-head); }
+    .user-email { color: var(--muted); font-size: .8rem; font-family: var(--font-mono); }
+    .age-badge {
+      background: rgba(77,208,225,.1); color: var(--accent3);
+      border: 1px solid rgba(77,208,225,.25);
+      padding: 2px 8px; border-radius: 999px; font-size: .75rem;
+      font-family: var(--font-mono); white-space: nowrap;
+    }
+    .hobby-tag {
+      display: inline-block; background: rgba(124,106,247,.12);
+      color: var(--accent); border: 1px solid rgba(124,106,247,.25);
+      padding: 2px 7px; border-radius: 4px; font-size: .72rem;
+      margin: 2px 2px 0 0;
+    }
+    .actions { display: flex; gap: 6px; }
+
+    /* ── PAGINATION ──────────────────────────────────────────── */
+    .pagination {
+      padding: 16px 20px; border-top: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 12px; flex-wrap: wrap;
+    }
+    .page-info { font-size: .8rem; color: var(--muted); font-family: var(--font-mono); }
+    .page-btns { display: flex; gap: 6px; }
+    .page-btn {
+      width: 32px; height: 32px; border-radius: 6px; border: 1px solid var(--border);
+      background: transparent; color: var(--text); cursor: pointer;
+      display: flex; align-items: center; justify-content: center; font-size: .85rem;
+      transition: all .15s;
+    }
+    .page-btn:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+    .page-btn.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+    .page-btn:disabled { opacity: .4; cursor: not-allowed; }
+
+    /* ── MODAL ───────────────────────────────────────────────── */
+    .modal-overlay {
+      display: none; position: fixed; inset: 0; z-index: 200;
+      background: rgba(0,0,0,.7); backdrop-filter: blur(4px);
+      align-items: center; justify-content: center;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 16px; width: 480px; max-width: 90vw;
+      max-height: 90vh; overflow-y: auto;
+      animation: modalIn .2s ease;
+    }
+    @keyframes modalIn { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:translateY(0)} }
+    .modal-header {
+      padding: 20px 24px 16px;
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .modal-title { font-family: var(--font-head); font-size: 1rem; font-weight: 700; }
+    .modal-close { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 1.2rem; line-height: 1; }
+    .modal-close:hover { color: var(--text); }
+    .modal-body { padding: 20px 24px; display: flex; flex-direction: column; gap: 14px; }
+    .modal-footer { padding: 16px 24px; border-top: 1px solid var(--border); display: flex; gap: 10px; justify-content: flex-end; }
+
+    /* ── TOAST ───────────────────────────────────────────────── */
+    #toast-container {
+      position: fixed; bottom: 24px; right: 24px;
+      display: flex; flex-direction: column; gap: 10px; z-index: 999;
+    }
+    .toast {
+      padding: 12px 18px; border-radius: 10px; font-size: .875rem;
+      border-left: 3px solid; min-width: 240px; max-width: 360px;
+      display: flex; align-items: center; gap: 10px;
+      animation: toastIn .3s ease;
+      box-shadow: 0 8px 24px rgba(0,0,0,.4);
+    }
+    @keyframes toastIn { from{opacity:0;transform:translateX(30px)} to{opacity:1;transform:translateX(0)} }
+    .toast.success { background: rgba(102,187,106,.15); border-color: var(--success); color: var(--success); }
+    .toast.error   { background: rgba(239,83,80,.15);   border-color: var(--danger);  color: var(--danger); }
+    .toast.info    { background: rgba(124,106,247,.15); border-color: var(--accent);  color: var(--accent); }
+
+    /* ── EMPTY STATE ─────────────────────────────────────────── */
+    .empty {
+      padding: 60px 24px; text-align: center;
+      color: var(--muted); font-size: .9rem;
+    }
+    .empty-icon { font-size: 3rem; margin-bottom: 12px; opacity: .4; }
+
+    /* ── LOADER ──────────────────────────────────────────────── */
+    .loader {
+      display: inline-block; width: 16px; height: 16px;
+      border: 2px solid rgba(255,255,255,.2); border-top-color: #fff;
+      border-radius: 50%; animation: spin .7s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── RESPONSIVE ──────────────────────────────────────────── */
+    @media (max-width: 900px) {
+      .app { grid-template-columns: 1fr; }
+      .stats-row { grid-template-columns: repeat(3, 1fr); }
+    }
+    @media (max-width: 500px) {
+      .stats-row { grid-template-columns: 1fr 1fr; }
+      header { padding: 0 16px; }
+      .app { padding: 16px 12px; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo">UserVault <span>/ Management System</span></div>
+  <div class="status-pill"><span class="status-dot"></span> API Connected</div>
+</header>
+
+<div class="app">
+
+  <!-- ── LEFT: ADD USER FORM ─────────────────────────────────── -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-icon" style="background:rgba(124,106,247,.15)">✦</div>
+      <span class="card-title">Add New User</span>
+    </div>
+    <div class="form-body" id="add-form">
+      <div class="field">
+        <label>Full Name *</label>
+        <input type="text" id="f-name" placeholder="e.g. Alice Johnson" />
+      </div>
+      <div class="field">
+        <label>Email Address *</label>
+        <input type="email" id="f-email" placeholder="alice@example.com" />
+      </div>
+      <div class="field">
+        <label>Age</label>
+        <input type="number" id="f-age" placeholder="25" min="0" max="120" />
+      </div>
+      <div class="field">
+        <label>Hobbies <span style="color:var(--muted);font-size:.7rem">(comma separated)</span></label>
+        <input type="text" id="f-hobbies" placeholder="coding, reading, hiking" />
+      </div>
+      <div class="field">
+        <label>Bio <span style="color:var(--muted);font-size:.7rem">(used for text search)</span></label>
+        <textarea id="f-bio" placeholder="Short description about this user…"></textarea>
+      </div>
+      <button class="btn btn-primary btn-full" onclick="createUser()" id="btn-create">
+        ✦ Add User
+      </button>
+    </div>
+  </div>
+
+  <!-- ── RIGHT PANEL ─────────────────────────────────────────── -->
+  <div class="right-panel">
+
+    <!-- Stats -->
+    <div class="stats-row">
+      <div class="stat-card">
+        <span class="stat-val" id="stat-total">—</span>
+        <span class="stat-label">Total Users</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-val" id="stat-page">—</span>
+        <span class="stat-label">This Page</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-val" id="stat-pages">—</span>
+        <span class="stat-label">Total Pages</span>
+      </div>
+    </div>
+
+    <!-- Search & Filter -->
+    <div class="search-bar">
+      <div class="field" style="flex:2">
+        <label>Search Name / Bio</label>
+        <input type="text" id="s-name" placeholder="Type to search…" oninput="debounceSearch()" />
+      </div>
+      <div class="field">
+        <label>Email</label>
+        <input type="text" id="s-email" placeholder="Filter email" oninput="debounceSearch()" />
+      </div>
+      <div class="field" style="flex:0 0 90px">
+        <label>Min Age</label>
+        <input type="number" id="s-minage" placeholder="0" oninput="debounceSearch()" />
+      </div>
+      <div class="field" style="flex:0 0 90px">
+        <label>Max Age</label>
+        <input type="number" id="s-maxage" placeholder="120" oninput="debounceSearch()" />
+      </div>
+      <div class="field" style="flex:0 0 110px">
+        <label>Hobby</label>
+        <input type="text" id="s-hobby" placeholder="e.g. coding" oninput="debounceSearch()" />
+      </div>
+      <div class="field" style="flex:0 0 130px">
+        <label>Sort By</label>
+        <select id="s-sort" onchange="loadUsers()" style="background:var(--surface);border:1px solid var(--border);color:var(--text);padding:10px 14px;border-radius:8px;font-family:var(--font-body);font-size:.9rem;outline:none;cursor:pointer">
+          <option value="createdAt">Date Created</option>
+          <option value="name">Name</option>
+          <option value="age">Age</option>
+        </select>
+      </div>
+      <button class="btn btn-ghost btn-sm" onclick="clearFilters()">Clear</button>
+    </div>
+
+    <!-- Users Table -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-icon" style="background:rgba(77,208,225,.1)">◈</div>
+        <span class="card-title">All Users</span>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>User</th>
+              <th>Age</th>
+              <th>Hobbies</th>
+              <th>Bio</th>
+              <th>Created</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="user-table-body">
+            <tr><td colspan="6"><div class="empty"><div class="empty-icon">◌</div>Loading users…</div></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="pagination" id="pagination" style="display:none">
+        <span class="page-info" id="page-info"></span>
+        <div class="page-btns" id="page-btns"></div>
+      </div>
+    </div>
+
+  </div><!-- end right-panel -->
+</div><!-- end app -->
+
+<!-- ── EDIT MODAL ─────────────────────────────────────────────── -->
+<div class="modal-overlay" id="edit-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title">✎ Edit User</span>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="edit-id" />
+      <div class="field">
+        <label>Full Name *</label>
+        <input type="text" id="edit-name" placeholder="Full Name" />
+      </div>
+      <div class="field">
+        <label>Email Address *</label>
+        <input type="email" id="edit-email" placeholder="email@example.com" />
+      </div>
+      <div class="field">
+        <label>Age</label>
+        <input type="number" id="edit-age" placeholder="Age" min="0" max="120" />
+      </div>
+      <div class="field">
+        <label>Hobbies <span style="color:var(--muted);font-size:.7rem">(comma separated)</span></label>
+        <input type="text" id="edit-hobbies" placeholder="coding, reading" />
+      </div>
+      <div class="field">
+        <label>Bio</label>
+        <textarea id="edit-bio" placeholder="Short bio…"></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="updateUser()">Save Changes</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── TOAST CONTAINER ────────────────────────────────────────── -->
+<div id="toast-container"></div>
+
+<script>
+  const API = '/api/users';
+  let currentPage = 1;
+  let searchTimer;
+
+  // ── TOAST ──────────────────────────────────────────────────────
+  function toast(msg, type = 'info') {
+    const el = document.createElement('div');
+    el.className = `toast ${type}`;
+    const icons = { success: '✓', error: '✕', info: '◆' };
+    el.innerHTML = `<span>${icons[type]}</span> ${msg}`;
+    document.getElementById('toast-container').prepend(el);
+    setTimeout(() => el.remove(), 3500);
+  }
+
+  // ── DEBOUNCE SEARCH ────────────────────────────────────────────
+  function debounceSearch() {
+    clearTimeout(searchTimer);
+    searchTimer = setTimeout(() => { currentPage = 1; loadUsers(); }, 400);
+  }
+
+  // ── BUILD QUERY PARAMS ─────────────────────────────────────────
+  function buildParams() {
+    const p = new URLSearchParams();
+    const name   = document.getElementById('s-name').value.trim();
+    const email  = document.getElementById('s-email').value.trim();
+    const minAge = document.getElementById('s-minage').value;
+    const maxAge = document.getElementById('s-maxage').value;
+    const hobby  = document.getElementById('s-hobby').value.trim();
+    const sort   = document.getElementById('s-sort').value;
+
+    if (name)   p.set('name', name);
+    if (email)  p.set('email', email);
+    if (minAge) p.set('minAge', minAge);
+    if (maxAge) p.set('maxAge', maxAge);
+    if (hobby)  p.set('hobby', hobby);
+    p.set('sortBy', sort); p.set('order', 'desc');
+    p.set('page', currentPage); p.set('limit', 8);
+    return p.toString();
+  }
+
+  // ── LOAD USERS ─────────────────────────────────────────────────
+  async function loadUsers() {
+    const tbody = document.getElementById('user-table-body');
+    tbody.innerHTML = `<tr><td colspan="6"><div class="empty"><div class="loader"></div></div></td></tr>`;
+    try {
+      const res  = await fetch(`${API}?${buildParams()}`);
+      const json = await res.json();
+      if (!json.success) throw new Error(json.message);
+
+      const { data, pagination } = json;
+      document.getElementById('stat-total').textContent = pagination.total;
+      document.getElementById('stat-page').textContent  = data.length;
+      document.getElementById('stat-pages').textContent = pagination.totalPages;
+
+      if (data.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="6"><div class="empty"><div class="empty-icon">◌</div>No users found</div></td></tr>`;
+        document.getElementById('pagination').style.display = 'none';
+        return;
+      }
+
+      tbody.innerHTML = data.map(u => `
+        <tr>
+          <td>
+            <div class="user-name">${esc(u.name)}</div>
+            <div class="user-email">${esc(u.email)}</div>
+          </td>
+          <td>${u.age != null ? `<span class="age-badge">${u.age}</span>` : '<span style="color:var(--muted)">—</span>'}</td>
+          <td>${(u.hobbies||[]).slice(0,3).map(h=>`<span class="hobby-tag">${esc(h)}</span>`).join('')}
+              ${u.hobbies?.length > 3 ? `<span class="hobby-tag" style="opacity:.5">+${u.hobbies.length-3}</span>` : ''}</td>
+          <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--muted);font-size:.8rem">
+            ${u.bio ? esc(u.bio) : '—'}
+          </td>
+          <td style="color:var(--muted);font-size:.78rem;white-space:nowrap">
+            ${new Date(u.createdAt).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'})}
+          </td>
+          <td>
+            <div class="actions">
+              <button class="btn btn-success btn-sm" onclick='openEdit(${JSON.stringify(u)})'>Edit</button>
+              <button class="btn btn-danger btn-sm" onclick="deleteUser('${u._id}','${esc(u.name)}')">Del</button>
+            </div>
+          </td>
+        </tr>
+      `).join('');
+
+      renderPagination(pagination);
+    } catch (e) {
+      toast(e.message || 'Failed to load users', 'error');
+      tbody.innerHTML = `<tr><td colspan="6"><div class="empty">Error loading data</div></td></tr>`;
+    }
+  }
+
+  // ── PAGINATION ─────────────────────────────────────────────────
+  function renderPagination({ total, page, limit, totalPages }) {
+    const pag = document.getElementById('pagination');
+    const start = (page - 1) * limit + 1;
+    const end   = Math.min(page * limit, total);
+    pag.style.display = 'flex';
+    document.getElementById('page-info').textContent = `${start}–${end} of ${total}`;
+    const btns = document.getElementById('page-btns');
+    btns.innerHTML = '';
+    const add = (label, page, active = false, disabled = false) => {
+      const b = document.createElement('button');
+      b.className = `page-btn ${active?'active':''}`;
+      b.textContent = label; b.disabled = disabled;
+      b.onclick = () => { currentPage = page; loadUsers(); };
+      btns.appendChild(b);
+    };
+    add('‹', page - 1, false, page === 1);
+    const range = [...new Set([1, page-1, page, page+1, totalPages])].filter(p => p>=1&&p<=totalPages).sort((a,b)=>a-b);
+    let last = 0;
+    range.forEach(p => {
+      if (last && p - last > 1) { const s = document.createElement('span'); s.textContent='…'; s.style.cssText='color:var(--muted);padding:0 4px;line-height:32px'; btns.appendChild(s); }
+      add(p, p, p===page);
+      last = p;
+    });
+    add('›', page + 1, false, page === totalPages);
+  }
+
+  // ── CREATE USER ────────────────────────────────────────────────
+  async function createUser() {
+    const btn = document.getElementById('btn-create');
+    const name    = document.getElementById('f-name').value.trim();
+    const email   = document.getElementById('f-email').value.trim();
+    const age     = document.getElementById('f-age').value;
+    const hobbies = document.getElementById('f-hobbies').value.trim();
+    const bio     = document.getElementById('f-bio').value.trim();
+
+    if (!name || !email) { toast('Name and email are required', 'error'); return; }
+
+    btn.disabled = true;
+    btn.innerHTML = '<span class="loader"></span> Saving…';
+    try {
+      const body = { name, email };
+      if (age) body.age = Number(age);
+      if (hobbies) body.hobbies = hobbies.split(',').map(h=>h.trim()).filter(Boolean);
+      if (bio) body.bio = bio;
+
+      const res  = await fetch(API, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
+      const json = await res.json();
+      if (!json.success) throw new Error(json.message);
+
+      toast(`${name} added successfully!`, 'success');
+      ['f-name','f-email','f-age','f-hobbies','f-bio'].forEach(id => document.getElementById(id).value = '');
+      currentPage = 1;
+      loadUsers();
+    } catch (e) {
+      toast(e.message || 'Failed to create user', 'error');
+    } finally {
+      btn.disabled = false; btn.innerHTML = '✦ Add User';
+    }
+  }
+
+  // ── DELETE USER ────────────────────────────────────────────────
+  async function deleteUser(id, name) {
+    if (!confirm(`Delete "${name}"? This cannot be undone.`)) return;
+    try {
+      const res  = await fetch(`${API}/${id}`, { method:'DELETE' });
+      const json = await res.json();
+      if (!json.success) throw new Error(json.message);
+      toast(`${name} deleted`, 'info');
+      loadUsers();
+    } catch (e) {
+      toast(e.message || 'Delete failed', 'error');
+    }
+  }
+
+  // ── OPEN EDIT MODAL ────────────────────────────────────────────
+  function openEdit(user) {
+    document.getElementById('edit-id').value     = user._id;
+    document.getElementById('edit-name').value   = user.name;
+    document.getElementById('edit-email').value  = user.email;
+    document.getElementById('edit-age').value    = user.age ?? '';
+    document.getElementById('edit-hobbies').value = (user.hobbies||[]).join(', ');
+    document.getElementById('edit-bio').value    = user.bio || '';
+    document.getElementById('edit-modal').classList.add('open');
+  }
+
+  function closeModal() {
+    document.getElementById('edit-modal').classList.remove('open');
+  }
+
+  // ── UPDATE USER ────────────────────────────────────────────────
+  async function updateUser() {
+    const id      = document.getElementById('edit-id').value;
+    const name    = document.getElementById('edit-name').value.trim();
+    const email   = document.getElementById('edit-email').value.trim();
+    const age     = document.getElementById('edit-age').value;
+    const hobbies = document.getElementById('edit-hobbies').value.trim();
+    const bio     = document.getElementById('edit-bio').value.trim();
+
+    if (!name || !email) { toast('Name and email are required', 'error'); return; }
+
+    try {
+      const body = { name, email };
+      if (age !== '') body.age = Number(age);
+      if (hobbies) body.hobbies = hobbies.split(',').map(h=>h.trim()).filter(Boolean);
+      body.bio = bio;
+
+      const res  = await fetch(`${API}/${id}`, { method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
+      const json = await res.json();
+      if (!json.success) throw new Error(json.message);
+
+      toast('User updated successfully', 'success');
+      closeModal(); loadUsers();
+    } catch (e) {
+      toast(e.message || 'Update failed', 'error');
+    }
+  }
+
+  // ── CLEAR FILTERS ──────────────────────────────────────────────
+  function clearFilters() {
+    ['s-name','s-email','s-minage','s-maxage','s-hobby'].forEach(id => document.getElementById(id).value = '');
+    document.getElementById('s-sort').value = 'createdAt';
+    currentPage = 1; loadUsers();
+  }
+
+  // ── ESCAPE HTML ────────────────────────────────────────────────
+  function esc(str) {
+    return String(str||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  // ── CLOSE MODAL ON OVERLAY CLICK ──────────────────────────────
+  document.getElementById('edit-modal').addEventListener('click', function(e) {
+    if (e.target === this) closeModal();
+  });
+
+  // ── INIT ───────────────────────────────────────────────────────
+  loadUsers();
+</script>
+</body>
+</html>
